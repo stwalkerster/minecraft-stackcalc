@@ -8,8 +8,28 @@ def usage() -> None:
     pass
 
 
-def calc_stack_size(items: int) -> str:
-    stack_size = 64
+def stackable_size(item_name: str) -> int:
+    if item_name in (
+        # potions
+        # filled buckets
+        # items with durability
+    ):
+        return 1
+    if item_name in (
+        # snowballs
+        # empty buckets
+        # eggs
+        # signs
+        # hanging signs
+        # ender pearls
+    ):
+        return 16
+
+    return 64 # Probably correct for most things.
+
+
+def calc_stack_size(items: int, item_name: str | None = None) -> str:
+    stack_size = 64 if item_name is None else stackable_size(item_name)
     shulker_size = 27
     shulker_total = stack_size * shulker_size
 
@@ -23,7 +43,42 @@ def calc_stack_size(items: int) -> str:
 
 def handle_file(filename: str) -> None:
     data = open(filename, "r").read().splitlines()
-    pass
+
+    header = data[1].strip('|').strip()
+    lines = [[c.strip() for c in l.split('|') if c.strip() != ''] for l in data[5:-3]]
+
+    for l in lines:
+        stack_size = calc_stack_size(int(l[1]), l[0])
+        if stack_size.startswith('0 SB +'):
+            stack_size = stack_size[len('0 SB +'):].strip()
+        if stack_size.startswith('0 st +'):
+            stack_size = stack_size[len('0 st +'):].strip()
+
+        l.append(stack_size)
+
+    name_length = max([len(l[0]) for l in lines])
+    stack_length = max([len(l[4]) for l in lines])
+
+    stack_length += max(len(header) - (name_length + stack_length + 3), 0)
+
+    new_lines = (
+        [
+            "+-" + "".ljust(len(header), "-") + "-+",
+            "| " + header + " |",
+            "+-" + "".ljust(name_length, "-") + "-+-" + "".rjust(stack_length, "-") + "-+",
+            "| " + "Item".ljust(name_length) + " | " + "Total".rjust(stack_length) + " |",
+            "+-" + "".ljust(name_length, "-") + "-+-" + "".rjust(stack_length, "-") + "-+",
+        ] +
+        [f'| {l[0].ljust(name_length)} | {l[4].rjust(stack_length)} |' for l in lines] +
+        [
+            "+-" + "".ljust(name_length, "-") + "-+-" + "".rjust(stack_length, "-") + "-+",
+            "| " + "Item".ljust(name_length) + " | " + "Total".rjust(stack_length) + " |",
+            "+-" + "".ljust(name_length, "-") + "-+-" + "".rjust(stack_length, "-") + "-+",
+        ]
+    )
+
+    for l in new_lines:
+        print(l)
 
 
 def main() -> int:
